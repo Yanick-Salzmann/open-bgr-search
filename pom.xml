@@ -13,6 +13,7 @@
     <modules>
         <module>es-mcp-client</module>
         <module>config-common</module>
+        <module>opencaselaw-integration</module>
     </modules>
 
     <packaging>pom</packaging>
