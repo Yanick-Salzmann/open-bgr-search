@@ -3,7 +3,6 @@ package ch.yanick.bgr.es.mcp
 import ch.yanick.bgr.config.AppConfig
 import ch.yanick.bgr.es.mcp.model.SearchByCaseNumberInput
 import ch.yanick.bgr.es.mcp.model.SearchByCaseNumberOutput
-import ch.yanick.bgr.es.mcp.model.ServerInfoInput
 import ch.yanick.bgr.es.mcp.model.ServerInfoOutput
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -11,12 +10,10 @@ import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.client.ReconnectionOptions
 import io.modelcontextprotocol.kotlin.sdk.client.StreamableHttpClientTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
-import kotlinx.datetime.LocalDate
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNamingStrategy
 import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.modules.SerializersModule
 import org.slf4j.LoggerFactory
 
 class EsMcpClient(private val config: AppConfig) {
@@ -37,6 +34,7 @@ class EsMcpClient(private val config: AppConfig) {
 
     @OptIn(ExperimentalSerializationApi::class)
     private val json = Json {
+        isLenient = true
         namingStrategy = JsonNamingStrategy.SnakeCase
     }
 

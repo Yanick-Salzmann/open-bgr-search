@@ -1,8 +1,8 @@
 package ch.yanick.bgr.es.mcp.model
 
 import kotlinx.datetime.LocalDate
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 
 object Sorting {
@@ -23,6 +23,7 @@ data class Hit(
     val title: String,
     val abstract: String,
     val text: String,
+    val textTruncated: String?,
     val meta: String,
     val canton: String,
     val court: String,
@@ -31,7 +32,8 @@ data class Hit(
     val isPdf: Boolean,
     val documentUrl: String,
     val originalUrl: String?,
-    val sort: Array<JsonElement>? = null
+    val sort: Array<JsonElement>? = null,
+    val contentLength: Int?
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
