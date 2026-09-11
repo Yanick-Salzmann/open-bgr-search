@@ -6,6 +6,7 @@ import ch.yanick.bgr.ocl.CaseRecord
 import ch.yanick.bgr.ocl.OpenCaseLawListener
 import ch.yanick.bgr.ocl.OpenCaseLawRepository
 import ch.yanick.bgr.search.db.CaseRecordRepository
+import ch.yanick.bgr.search.db.CaseRepoFileRepository
 import ch.yanick.bgr.search.db.configureDatabaseModule
 import io.ktor.server.application.log
 import io.ktor.server.engine.embeddedServer
@@ -13,7 +14,6 @@ import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.di.dependencies
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlin.time.Instant
 
 fun main(vararg args: String) {
     val server = embeddedServer(Netty, port = 8800) {
@@ -34,18 +34,39 @@ fun main(vararg args: String) {
                     return true
                 }
 
-                override fun isNew(filePath: String, modified: Instant): Boolean {
-                    return true
+                override fun isNew(filePath: String, sha: String): Boolean {
+                    return runBlocking {
+                        CaseRepoFileRepository.shaForFile(filePath) != sha
+                    }
                 }
 
-                override fun entryExists(filePath: String, decisionId: String): Boolean {
-                    return false
+                override fun fileCompleted(filePath: String, sha: String) {
+                    runBlocking {
+                        CaseRepoFileRepository.upsert(filePath, sha)
+                    }
+                }
+
+                override fun entryExists(filePath: String, decisionId: String): Boolean = runBlocking {
+                    if(decisionId.isBlank()) {
+                        return@runBlocking false
+                    }
+                    caseRepo.caseExists("$filePath.$decisionId")
                 }
 
                 override fun saveEntry(filePath: String, decisionId: String, caseRecord: CaseRecord) {
-                    caseRecord.decisionId ?: return
+                    val decision = caseRecord.decisionId ?: return
+                    if (decision.isBlank()) {
+                        return
+                    }
+
+                    if(decision.length > 500) {
+                        log.warn("Ignoring decision $decision, ID too long")
+                        return
+                    }
+
+                    val caseId = "$filePath.$decisionId"
                     runBlocking {
-                        caseRepo.saveCase(caseRecord)
+                        caseRepo.upsertCase(caseRecord.copy(decisionId = caseId))
                     }
                 }
             }))

@@ -79,7 +79,13 @@ data class CaseRecord(
             val resMap = fieldMap.map { (raw, field) ->
                 val content = if (rec.hasField(raw)) {
                     when (val data = rec[raw]) {
-                        is Utf8 -> data.toString()
+                        is Utf8 -> {
+                            if(data.byteLength > 1_000_000_000) {
+                                ""
+                            } else {
+                                data.toString().replace("\u0000", "").trim()
+                            }
+                        }
                         else -> ""
                     }
                 } else ""
@@ -160,47 +166,17 @@ data class CitationNode(
     val citing: MutableList<CitationNode>
 )
 
-fun buildCitationGraph(cases: Map<String, CaseRecord>): Map<String, CitationNode> {
-    val citationRegex = "\"([^\"]+)\"".toRegex()
-    val ret = mutableMapOf<String, CitationNode>()
-    cases.forEach { (id, case) ->
-        val existingNode = ret.getOrPut(id) { CitationNode(id, mutableListOf()) }
-        if (case.citedDecisions?.isBlank() ?: true) {
-            return@forEach
+fun readCasesFromData(file: Path): Sequence<CaseRecord> {
+    val reader = AvroParquetReader.genericRecordReader(LocalInputFile(file))
+    return generateSequence {
+        val res = reader.read()
+        if(res == null) {
+            reader.close()
         }
-
-        val citations = citationRegex.findAll(case.citedDecisions)
-        citations.forEach { cit ->
-            val citedRef = cit.groups[1]?.value ?: return@forEach
-            if (!cases.containsKey(citedRef)) {
-                println("New case: $citedRef")
-            }
-            val cited = ret.getOrPut(citedRef) { CitationNode(citedRef, mutableListOf()) }
-            existingNode.citing.add(cited)
-        }
-    }
-
-    return ret
-}
-
-private val parquetFiles: List<Path> = Files.walk(Paths.get("third_party/swiss-caselaw")).use { strm ->
-    strm.filter {
-        it.isRegularFile()
+        res
+    }.map {
+        CaseRecord.fromRaw(it)
     }.filter {
-        it.extension == "parquet"
-    }.toList()
-}
-
-fun readCasesFromData(file: Path): Map<String, CaseRecord> {
-    return AvroParquetReader.genericRecordReader(LocalInputFile(file))
-        .use { reader ->
-            generateSequence { reader.read() }.map {
-                CaseRecord.fromRaw(it)
-            }.filter {
-                it.decisionId != null
-            }.associateBy {
-                it.decisionId!!
-            }
-        }
-
+        it.decisionId != null
+    }
 }

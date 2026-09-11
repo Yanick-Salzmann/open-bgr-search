@@ -6,6 +6,8 @@
         </Console>
     </Appenders>
     <Loggers>
+        <Logger name="org.apache.parquet.hadoop" level="WARN"/>
+        <Logger name="org.apache.hadoop" level="WARN"/>
         <Root level="INFO">
             <AppenderRef ref="Console"/>
         </Root>

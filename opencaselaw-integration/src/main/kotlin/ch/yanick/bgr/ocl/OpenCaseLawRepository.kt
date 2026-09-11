@@ -3,15 +3,15 @@ package ch.yanick.bgr.ocl
 import ch.yanick.bgr.config.AppConfig
 import ch.yanick.bgr.ocl.model.TreeObject
 import ch.yanick.bgr.utils.logger
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logging
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsChannel
-import io.ktor.serialization.kotlinx.json.json
-import io.ktor.utils.io.ByteReadChannel
+import io.ktor.client.statement.*
+import io.ktor.serialization.kotlinx.json.*
+import io.ktor.utils.io.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -24,12 +24,16 @@ class OpenCaseLawRepository(config: AppConfig) {
 
     private val client = HttpClient()
         .config {
-            install(ContentNegotiation) {
+            install(HttpTimeout) {
+                requestTimeoutMillis = 600_000
+            }
+
+            install (ContentNegotiation) {
                 json()
             }
             install(Logging) {
-                level = LogLevel.HEADERS
-
+                level = LogLevel.INFO
+                this.format = LoggingFormat.OkHttp
             }
         }
 
@@ -52,8 +56,11 @@ class OpenCaseLawRepository(config: AppConfig) {
                     continue
                 }
 
-                if (listener.isNew(path, lastCommit.date)) {
+                if (listener.isNew(path, lastCommit.id)) {
                     loader.processFile(path)
+                    listener.fileCompleted(path, lastCommit.id)
+                } else {
+                    log.info("Skipping $path at version ${lastCommit.id} because it is already up to date")
                 }
             }
         }
